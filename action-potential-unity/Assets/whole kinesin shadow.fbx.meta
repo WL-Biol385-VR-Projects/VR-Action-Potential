@@ -1,0 +1,157 @@
+fileFormatVersion: 2
+guid: 2a41ab2933b145243af824e342eef016
+timeCreated: 1510001152
+licenseType: Free
+ModelImporter:
+  serializedVersion: 19
+  fileIDToRecycleName:
+    100000: 2kin
+    100002: 2kin_1
+    100004: 2y5w
+    100006: 5d3a_5
+    100008: 5d3a_5_2
+    100010: 5djo
+    100012: CINEMA_4D_Editor
+    100014: MSMS_MOL2kin
+    100016: MSMS_MOL2kin_2
+    100018: MSMS_MOL2kin_2_MeshPart0
+    100020: MSMS_MOL2kin_2_MeshPart1
+    100022: MSMS_MOL2kin_MeshPart0
+    100024: MSMS_MOL2kin_MeshPart1
+    100026: MSMS_MOL2y5w
+    100028: MSMS_MOL2y5w_MeshPart0
+    100030: MSMS_MOL2y5w_MeshPart1
+    100032: MSMS_MOL2y5w_MeshPart2
+    100034: MSMS_MOL5d3a_5
+    100036: MSMS_MOL5d3a_5_2
+    100038: MSMS_MOL5djo
+    100040: MSMS_MOL5djo_MeshPart0
+    100042: MSMS_MOL5djo_MeshPart1
+    100044: //RootNode
+    400000: 2kin
+    400002: 2kin_1
+    400004: 2y5w
+    400006: 5d3a_5
+    400008: 5d3a_5_2
+    400010: 5djo
+    400012: CINEMA_4D_Editor
+    400014: MSMS_MOL2kin
+    400016: MSMS_MOL2kin_2
+    400018: MSMS_MOL2kin_2_MeshPart0
+    400020: MSMS_MOL2kin_2_MeshPart1
+    400022: MSMS_MOL2kin_MeshPart0
+    400024: MSMS_MOL2kin_MeshPart1
+    400026: MSMS_MOL2y5w
+    400028: MSMS_MOL2y5w_MeshPart0
+    400030: MSMS_MOL2y5w_MeshPart1
+    400032: MSMS_MOL2y5w_MeshPart2
+    400034: MSMS_MOL5d3a_5
+    400036: MSMS_MOL5d3a_5_2
+    400038: MSMS_MOL5djo
+    400040: MSMS_MOL5djo_MeshPart0
+    400042: MSMS_MOL5djo_MeshPart1
+    400044: //RootNode
+    2300000: MSMS_MOL2kin_2_MeshPart0
+    2300002: MSMS_MOL2kin_2_MeshPart1
+    2300004: MSMS_MOL2kin_MeshPart0
+    2300006: MSMS_MOL2kin_MeshPart1
+    2300008: MSMS_MOL2y5w_MeshPart0
+    2300010: MSMS_MOL2y5w_MeshPart1
+    2300012: MSMS_MOL2y5w_MeshPart2
+    2300014: MSMS_MOL5d3a_5
+    2300016: MSMS_MOL5d3a_5_2
+    2300018: MSMS_MOL5djo_MeshPart0
+    2300020: MSMS_MOL5djo_MeshPart1
+    3300000: MSMS_MOL2kin_2_MeshPart0
+    3300002: MSMS_MOL2kin_2_MeshPart1
+    3300004: MSMS_MOL2kin_MeshPart0
+    3300006: MSMS_MOL2kin_MeshPart1
+    3300008: MSMS_MOL2y5w_MeshPart0
+    3300010: MSMS_MOL2y5w_MeshPart1
+    3300012: MSMS_MOL2y5w_MeshPart2
+    3300014: MSMS_MOL5d3a_5
+    3300016: MSMS_MOL5d3a_5_2
+    3300018: MSMS_MOL5djo_MeshPart0
+    3300020: MSMS_MOL5djo_MeshPart1
+    4300000: MSMS_MOL2kin_MeshPart0
+    4300002: MSMS_MOL2kin_MeshPart1
+    4300004: MSMS_MOL2kin_2_MeshPart0
+    4300006: MSMS_MOL2kin_2_MeshPart1
+    4300008: MSMS_MOL5d3a_5
+    4300010: MSMS_MOL2y5w_MeshPart0
+    4300012: MSMS_MOL2y5w_MeshPart1
+    4300014: MSMS_MOL2y5w_MeshPart2
+    4300016: MSMS_MOL5d3a_5_2
+    4300018: MSMS_MOL5djo_MeshPart0
+    4300020: MSMS_MOL5djo_MeshPart1
+    9500000: //RootNode
+  materials:
+    importMaterials: 1
+    materialName: 0
+    materialSearch: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    motionNodeName: 
+    rigImportErrors: 
+    rigImportWarnings: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    clipAnimations: []
+    isReadable: 1
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    importBlendShapes: 1
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    optimizeMeshForGPU: 1
+    keepQuads: 0
+    weldVertices: 1
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+  importAnimation: 1
+  copyAvatar: 0
+  humanDescription:
+    serializedVersion: 2
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    rootMotionBoneName: 
+    rootMotionBoneRotation: {x: 0, y: 0, z: 0, w: 1}
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  animationType: 2
+  humanoidOversampling: 1
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

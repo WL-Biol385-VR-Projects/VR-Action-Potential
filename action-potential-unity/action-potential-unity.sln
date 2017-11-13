@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2017
+# Visual Studio 2015
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "action-potential-unity", "action-potential-unity.csproj", "{9F1D9A55-B38B-35CC-F1E7-B0E62667F5C0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "action-potential-unity.Editor", "action-potential-unity.Editor.csproj", "{2B295F5F-47CD-3F60-E0E8-D75A3848C532}"

@@ -10,7 +10,7 @@ namespace VRTK
     /// <remarks>
     ///   * Select `FramesPerSecondCanvas` object from the scene objects
     ///   * Find the `Canvas` component
-    ///   * Set the `Render Camera` parameter to `Camera(eye)` which can be found in the `[CameraRig]` prefab.
+    ///   * Set the `Render Camera` parameter to the camera used by the VR Headset (e.g. SteamVR: [CameraRig]-> Camera(Head) -> Camera(eye)])
     ///
     /// This script is pretty much a copy and paste from the script at: http://talesfromtherift.com/vr-fps-counter/ So all credit to Peter Koch for his work. Twitter: @peterept
     /// </remarks>
@@ -34,19 +34,32 @@ namespace VRTK
         [Tooltip("The colour of the FPS text when the frames per second are at an unreasonable level of the Target FPS.")]
         public Color badColor = Color.red;
 
-        private const float updateInterval = 0.5f;
-        private int framesCount;
-        private float framesTime;
-        private Text text;
+        protected const float updateInterval = 0.5f;
+        protected int framesCount;
+        protected float framesTime;
+        protected Canvas canvas;
+        protected Text text;
+        protected VRTK_SDKManager sdkManager;
 
-        private void Start()
+        protected virtual void OnEnable()
         {
-            text = GetComponent<Text>();
-            text.fontSize = fontSize;
-            text.transform.localPosition = position;
+            sdkManager = VRTK_SDKManager.instance;
+            if (sdkManager != null)
+            {
+                sdkManager.LoadedSetupChanged += LoadedSetupChanged;
+            }
+            InitCanvas();
         }
 
-        private void Update()
+        protected virtual void OnDisable()
+        {
+            if (sdkManager != null && !gameObject.activeSelf)
+            {
+                sdkManager.LoadedSetupChanged -= LoadedSetupChanged;
+            }
+        }
+
+        protected virtual void Update()
         {
             framesCount++;
             framesTime += Time.unscaledDeltaTime;
@@ -70,6 +83,38 @@ namespace VRTK
                 }
                 framesCount = 0;
                 framesTime = 0;
+            }
+        }
+
+        protected virtual void LoadedSetupChanged(VRTK_SDKManager sender, VRTK_SDKManager.LoadedSetupChangeEventArgs e)
+        {
+            SetCanvasCamera();
+        }
+
+        protected virtual void InitCanvas()
+        {
+            canvas = transform.GetComponentInParent<Canvas>();
+            text = GetComponent<Text>();
+
+            if (canvas != null)
+            {
+                canvas.planeDistance = 0.5f;
+            }
+
+            if (text != null)
+            {
+                text.fontSize = fontSize;
+                text.transform.localPosition = position;
+            }
+            SetCanvasCamera();
+        }
+
+        protected virtual void SetCanvasCamera()
+        {
+            Transform sdkCamera = VRTK_DeviceFinder.HeadsetCamera();
+            if (sdkCamera != null)
+            {
+                canvas.worldCamera = sdkCamera.GetComponent<Camera>();
             }
         }
     }
