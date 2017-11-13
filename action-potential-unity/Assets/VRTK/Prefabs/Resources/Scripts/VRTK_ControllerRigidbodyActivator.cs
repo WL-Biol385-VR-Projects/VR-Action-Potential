@@ -4,22 +4,6 @@ namespace VRTK
     using UnityEngine;
 
     /// <summary>
-    /// Event Payload
-    /// </summary>
-    /// <param name="interactingObject">The object that touching the activator.</param>
-    public struct ControllerRigidbodyActivatorEventArgs
-    {
-        public VRTK_InteractTouch touchingObject;
-    }
-
-    /// <summary>
-    /// Event Payload
-    /// </summary>
-    /// <param name="sender">this object</param>
-    /// <param name="e"><see cref="ControllerRigidbodyActivatorEventArgs"/></param>
-    public delegate void ControllerRigidbodyActivatorEventHandler(object sender, ControllerRigidbodyActivatorEventArgs e);
-
-    /// <summary>
     /// This adds a simple trigger collider volume that when a controller enters will enable the rigidbody on the controller.
     /// </summary>
     /// <remarks>
@@ -33,65 +17,22 @@ namespace VRTK
     /// </remarks>
     public class VRTK_ControllerRigidbodyActivator : MonoBehaviour
     {
-        [Tooltip("If this is checked then the collider will have it's rigidbody toggled on and off during a collision.")]
-        public bool isEnabled = true;
-
-        /// <summary>
-        /// Emitted when the controller rigidbody is turned on.
-        /// </summary>
-        public event ControllerRigidbodyActivatorEventHandler ControllerRigidbodyOn;
-        /// <summary>
-        /// Emitted when the controller rigidbody is turned off.
-        /// </summary>
-        public event ControllerRigidbodyActivatorEventHandler ControllerRigidbodyOff;
-
-        public virtual void OnControllerRigidbodyOn(ControllerRigidbodyActivatorEventArgs e)
-        {
-            if (ControllerRigidbodyOn != null)
-            {
-                ControllerRigidbodyOn(this, e);
-            }
-        }
-
-        public virtual void OnControllerRigidbodyOff(ControllerRigidbodyActivatorEventArgs e)
-        {
-            if (ControllerRigidbodyOff != null)
-            {
-                ControllerRigidbodyOff(this, e);
-            }
-        }
-
-        protected virtual void OnTriggerEnter(Collider collider)
+        private void OnTriggerEnter(Collider collider)
         {
             ToggleRigidbody(collider, true);
         }
 
-        protected virtual void OnTriggerExit(Collider collider)
+        private void OnTriggerExit(Collider collider)
         {
             ToggleRigidbody(collider, false);
         }
 
-        protected virtual void ToggleRigidbody(Collider collider, bool state)
+        private void ToggleRigidbody(Collider collider, bool state)
         {
-            VRTK_InteractTouch touch = collider.GetComponentInParent<VRTK_InteractTouch>();
-            if (touch != null && (isEnabled || !state))
+            var touch = collider.GetComponentInParent<VRTK_InteractTouch>();
+            if (touch)
             {
                 touch.ToggleControllerRigidBody(state, state);
-                EmitEvent(state, touch);
-            }
-        }
-
-        protected virtual void EmitEvent(bool state, VRTK_InteractTouch touch)
-        {
-            ControllerRigidbodyActivatorEventArgs e;
-            e.touchingObject = touch;
-            if (state)
-            {
-                OnControllerRigidbodyOn(e);
-            }
-            else
-            {
-                OnControllerRigidbodyOff(e);
             }
         }
     }

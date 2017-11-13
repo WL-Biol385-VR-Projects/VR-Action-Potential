@@ -1,4 +1,4 @@
-﻿// Knob|Controls3D|100060
+﻿// Knob|Controls3D|0060
 namespace VRTK
 {
     using UnityEngine;
@@ -12,14 +12,11 @@ namespace VRTK
     /// <example>
     /// `VRTK/Examples/025_Controls_Overview` has a couple of rotator knobs that can be rotated by grabbing with the controller and then rotating the controller in the desired direction.
     /// </example>
-    [AddComponentMenu("VRTK/Scripts/Controls/3D/VRTK_Knob")]
     public class VRTK_Knob : VRTK_Control
     {
         public enum KnobDirection
         {
-            x,
-            y,
-            z
+            x, y, z // TODO: autodetect not yet done, it's a bit more difficult to get it right
         }
 
         [Tooltip("An optional game object to which the knob will be connected. If the game object moves the knob will follow along.")]
@@ -33,14 +30,16 @@ namespace VRTK
         [Tooltip("The increments in which knob values can change.")]
         public float stepSize = 1f;
 
-        protected const float MAX_AUTODETECT_KNOB_WIDTH = 3; // multiple of the knob width
-        protected KnobDirection finalDirection;
-        protected KnobDirection subDirection;
-        protected bool subDirectionFound = false;
-        protected Quaternion initialRotation;
-        protected Vector3 initialLocalRotation;
-        protected ConfigurableJoint knobJoint;
-        protected bool knobJointCreated = false;
+        private static float MAX_AUTODETECT_KNOB_WIDTH = 3; // multiple of the knob width
+        private KnobDirection finalDirection;
+        private KnobDirection subDirection;
+        private bool subDirectionFound = false;
+        private Quaternion initialRotation;
+        private Vector3 initialLocalRotation;
+        private Rigidbody rb;
+        private ConfigurableJoint cj;
+        private VRTK_InteractableObject io;
+        private bool cjCreated = false;
 
         protected override void InitRequiredComponents()
         {
@@ -53,35 +52,35 @@ namespace VRTK
         {
             finalDirection = direction;
 
-            if (knobJointCreated)
+            if (cjCreated)
             {
-                knobJoint.angularXMotion = ConfigurableJointMotion.Locked;
-                knobJoint.angularYMotion = ConfigurableJointMotion.Locked;
-                knobJoint.angularZMotion = ConfigurableJointMotion.Locked;
+                cj.angularXMotion = ConfigurableJointMotion.Locked;
+                cj.angularYMotion = ConfigurableJointMotion.Locked;
+                cj.angularZMotion = ConfigurableJointMotion.Locked;
 
                 switch (finalDirection)
                 {
                     case KnobDirection.x:
-                        knobJoint.angularXMotion = ConfigurableJointMotion.Free;
+                        cj.angularXMotion = ConfigurableJointMotion.Free;
                         break;
                     case KnobDirection.y:
-                        knobJoint.angularYMotion = ConfigurableJointMotion.Free;
+                        cj.angularYMotion = ConfigurableJointMotion.Free;
                         break;
                     case KnobDirection.z:
-                        knobJoint.angularZMotion = ConfigurableJointMotion.Free;
+                        cj.angularZMotion = ConfigurableJointMotion.Free;
                         break;
                 }
             }
 
-            if (knobJoint)
+            if (cj)
             {
-                knobJoint.xMotion = ConfigurableJointMotion.Locked;
-                knobJoint.yMotion = ConfigurableJointMotion.Locked;
-                knobJoint.zMotion = ConfigurableJointMotion.Locked;
+                cj.xMotion = ConfigurableJointMotion.Locked;
+                cj.yMotion = ConfigurableJointMotion.Locked;
+                cj.zMotion = ConfigurableJointMotion.Locked;
 
                 if (connectedTo)
                 {
-                    knobJoint.connectedBody = connectedTo.GetComponent<Rigidbody>();
+                    cj.connectedBody = connectedTo.GetComponent<Rigidbody>();
                 }
             }
 
@@ -90,11 +89,7 @@ namespace VRTK
 
         protected override ControlValueRange RegisterValueRange()
         {
-            return new ControlValueRange()
-            {
-                controlMin = min,
-                controlMax = max
-            };
+            return new ControlValueRange() { controlMin = min, controlMax = max };
         }
 
         protected override void HandleUpdate()
@@ -102,52 +97,51 @@ namespace VRTK
             value = CalculateValue();
         }
 
-        protected virtual void InitKnob()
+        private void InitKnob()
         {
-            Rigidbody knobRigidbody = GetComponent<Rigidbody>();
-            if (knobRigidbody == null)
+            rb = GetComponent<Rigidbody>();
+            if (rb == null)
             {
-                knobRigidbody = gameObject.AddComponent<Rigidbody>();
-                knobRigidbody.angularDrag = 10; // otherwise knob will continue to move too far on its own
+                rb = gameObject.AddComponent<Rigidbody>();
+                rb.angularDrag = 10; // otherwise knob will continue to move too far on its own
             }
-            knobRigidbody.isKinematic = false;
-            knobRigidbody.useGravity = false;
+            rb.isKinematic = false;
+            rb.useGravity = false;
 
-            VRTK_InteractableObject knobInteractableObject = GetComponent<VRTK_InteractableObject>();
-            if (knobInteractableObject == null)
+            io = GetComponent<VRTK_InteractableObject>();
+            if (io == null)
             {
-                knobInteractableObject = gameObject.AddComponent<VRTK_InteractableObject>();
+                io = gameObject.AddComponent<VRTK_InteractableObject>();
             }
-            knobInteractableObject.isGrabbable = true;
-            knobInteractableObject.grabAttachMechanicScript = gameObject.AddComponent<GrabAttachMechanics.VRTK_TrackObjectGrabAttach>();
-            knobInteractableObject.grabAttachMechanicScript.precisionGrab = true;
-            knobInteractableObject.secondaryGrabActionScript = gameObject.AddComponent<SecondaryControllerGrabActions.VRTK_SwapControllerGrabAction>();
-            knobInteractableObject.stayGrabbedOnTeleport = false;
+            io.isGrabbable = true;
+            io.precisionSnap = true;
+            io.stayGrabbedOnTeleport = false;
+            io.grabAttachMechanic = VRTK_InteractableObject.GrabAttachType.Track_Object;
 
-            knobJoint = GetComponent<ConfigurableJoint>();
-            if (knobJoint == null)
+            cj = GetComponent<ConfigurableJoint>();
+            if (cj == null)
             {
-                knobJoint = gameObject.AddComponent<ConfigurableJoint>();
-                knobJoint.configuredInWorldSpace = false;
-                knobJointCreated = true;
+                cj = gameObject.AddComponent<ConfigurableJoint>();
+                cj.configuredInWorldSpace = false;
+                cjCreated = true;
             }
 
             if (connectedTo)
             {
-                Rigidbody knobConnectedToRigidbody = connectedTo.GetComponent<Rigidbody>();
-                if (knobConnectedToRigidbody == null)
+                Rigidbody rb2 = connectedTo.GetComponent<Rigidbody>();
+                if (rb2 == null)
                 {
-                    knobConnectedToRigidbody = connectedTo.AddComponent<Rigidbody>();
-                    knobConnectedToRigidbody.useGravity = false;
-                    knobConnectedToRigidbody.isKinematic = true;
+                    rb2 = connectedTo.AddComponent<Rigidbody>();
+                    rb2.useGravity = false;
+                    rb2.isKinematic = true;
                 }
             }
         }
 
-        protected virtual KnobDirection DetectDirection()
+        private KnobDirection DetectDirection()
         {
-            KnobDirection returnDirection = KnobDirection.x;
-            Bounds bounds = VRTK_SharedMethods.GetBounds(transform);
+            KnobDirection direction = KnobDirection.x;
+            Bounds bounds = Utilities.GetBounds(transform);
 
             // shoot rays in all directions to learn about surroundings
             RaycastHit hitForward;
@@ -172,35 +166,35 @@ namespace VRTK
             float lengthNegZ = (hitForward.collider != null) ? hitForward.distance : float.MaxValue;
 
             // TODO: not yet the right decision strategy, works only partially
-            if (VRTK_SharedMethods.IsLowest(lengthX, new float[] { lengthY, lengthZ, lengthNegX, lengthNegY, lengthNegZ }))
+            if (Utilities.IsLowest(lengthX, new float[] { lengthY, lengthZ, lengthNegX, lengthNegY, lengthNegZ }))
             {
-                returnDirection = KnobDirection.z;
+                direction = KnobDirection.z;
             }
-            else if (VRTK_SharedMethods.IsLowest(lengthY, new float[] { lengthX, lengthZ, lengthNegX, lengthNegY, lengthNegZ }))
+            else if (Utilities.IsLowest(lengthY, new float[] { lengthX, lengthZ, lengthNegX, lengthNegY, lengthNegZ }))
             {
-                returnDirection = KnobDirection.y;
+                direction = KnobDirection.y;
             }
-            else if (VRTK_SharedMethods.IsLowest(lengthZ, new float[] { lengthX, lengthY, lengthNegX, lengthNegY, lengthNegZ }))
+            else if (Utilities.IsLowest(lengthZ, new float[] { lengthX, lengthY, lengthNegX, lengthNegY, lengthNegZ }))
             {
-                returnDirection = KnobDirection.x;
+                direction = KnobDirection.x;
             }
-            else if (VRTK_SharedMethods.IsLowest(lengthNegX, new float[] { lengthX, lengthY, lengthZ, lengthNegY, lengthNegZ }))
+            else if (Utilities.IsLowest(lengthNegX, new float[] { lengthX, lengthY, lengthZ, lengthNegY, lengthNegZ }))
             {
-                returnDirection = KnobDirection.z;
+                direction = KnobDirection.z;
             }
-            else if (VRTK_SharedMethods.IsLowest(lengthNegY, new float[] { lengthX, lengthY, lengthZ, lengthNegX, lengthNegZ }))
+            else if (Utilities.IsLowest(lengthNegY, new float[] { lengthX, lengthY, lengthZ, lengthNegX, lengthNegZ }))
             {
-                returnDirection = KnobDirection.y;
+                direction = KnobDirection.y;
             }
-            else if (VRTK_SharedMethods.IsLowest(lengthNegZ, new float[] { lengthX, lengthY, lengthZ, lengthNegX, lengthNegY }))
+            else if (Utilities.IsLowest(lengthNegZ, new float[] { lengthX, lengthY, lengthZ, lengthNegX, lengthNegY }))
             {
-                returnDirection = KnobDirection.x;
+                direction = KnobDirection.x;
             }
 
-            return returnDirection;
+            return direction;
         }
 
-        protected virtual float CalculateValue()
+        private float CalculateValue()
         {
             if (!subDirectionFound)
             {
@@ -234,24 +228,24 @@ namespace VRTK
             angle = Mathf.Round(angle * 1000f) / 1000f; // not rounding will produce slight offsets in 4th digit that mess up initial value
 
             // Quaternion.angle will calculate shortest route and only go to 180
-            float calculatedValue = 0;
+            float value = 0;
             if (angle > 0 && angle <= 180)
             {
-                calculatedValue = 360 - Quaternion.Angle(initialRotation, transform.rotation);
+                value = 360 - Quaternion.Angle(initialRotation, transform.rotation);
             }
             else
             {
-                calculatedValue = Quaternion.Angle(initialRotation, transform.rotation);
+                value = Quaternion.Angle(initialRotation, transform.rotation);
             }
 
             // adjust to value scale
-            calculatedValue = Mathf.Round((min + Mathf.Clamp01(calculatedValue / 360f) * (max - min)) / stepSize) * stepSize;
+            value = Mathf.Round((min + Mathf.Clamp01(value / 360f) * (max - min)) / stepSize) * stepSize;
             if (min > max && angle != 0)
             {
-                calculatedValue = (max + min) - calculatedValue;
+                value = (max + min) - value;
             }
 
-            return calculatedValue;
+            return value;
         }
     }
 }

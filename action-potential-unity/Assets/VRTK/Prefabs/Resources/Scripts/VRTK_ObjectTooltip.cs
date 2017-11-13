@@ -5,26 +5,10 @@ namespace VRTK
     using UnityEngine.UI;
 
     /// <summary>
-    /// Event Payload
-    /// </summary>
-    /// <param name="newText">The optional new text that is given to the tooltip.</param>
-    public struct ObjectTooltipEventArgs
-    {
-        public string newText;
-    }
-
-    /// <summary>
-    /// Event Payload
-    /// </summary>
-    /// <param name="sender">this object</param>
-    /// <param name="e"><see cref="ObjectTooltipEventArgs"/></param>
-    public delegate void ObjectTooltipEventHandler(object sender, ObjectTooltipEventArgs e);
-
-    /// <summary>
     /// This adds a UI element into the World Space that can be used to provide additional information about an object by providing a piece of text with a line drawn to a destination point.
     /// </summary>
     /// <remarks>
-    /// There are a number of parameters that can be set on the Prefab which are provided by the `VRTK_ObjectTooltip` script which is applied to the prefab.
+    /// There are a number of parameters that can be set on the Prefab which are provided by the `VRTK/Scripts/VRTK_ObjectTooltip` script which is applied to the prefab.
     /// </remarks>
     /// <example>
     /// `VRTK/Examples/029_Controller_Tooltips` displays two cubes that have an object tooltip added to them along with tooltips that have been added to the controllers.
@@ -49,41 +33,13 @@ namespace VRTK
         public Color containerColor = Color.black;
         [Tooltip("The colour to use for the line drawn between the tooltip and the destination transform.")]
         public Color lineColor = Color.black;
-        [Tooltip("If this is checked then the tooltip will be rotated so it always face the headset.")]
-        public bool alwaysFaceHeadset = false;
 
-        /// <summary>
-        /// Emitted when the object tooltip is reset.
-        /// </summary>
-        public event ObjectTooltipEventHandler ObjectTooltipReset;
-        /// <summary>
-        /// Emitted when the object tooltip text is updated.
-        /// </summary>
-        public event ObjectTooltipEventHandler ObjectTooltipTextUpdated;
-
-        protected LineRenderer line;
-        protected Transform headset;
-
-        public virtual void OnObjectTooltipReset(ObjectTooltipEventArgs e)
-        {
-            if (ObjectTooltipReset != null)
-            {
-                ObjectTooltipReset(this, e);
-            }
-        }
-
-        public virtual void OnObjectTooltipTextUpdated(ObjectTooltipEventArgs e)
-        {
-            if (ObjectTooltipTextUpdated != null)
-            {
-                ObjectTooltipTextUpdated(this, e);
-            }
-        }
+        private LineRenderer line;
 
         /// <summary>
         /// The ResetTooltip method resets the tooltip back to its initial state.
         /// </summary>
-        public virtual void ResetTooltip()
+        public void ResetTooltip()
         {
             SetContainer();
             SetText("UITextFront");
@@ -93,96 +49,65 @@ namespace VRTK
             {
                 drawLineTo = transform.parent;
             }
-            OnObjectTooltipReset(SetEventPayload());
         }
 
         /// <summary>
         /// The UpdateText method allows the tooltip text to be updated at runtime.
         /// </summary>
         /// <param name="newText">A string containing the text to update the tooltip to display.</param>
-        public virtual void UpdateText(string newText)
+        public void UpdateText(string newText)
         {
             displayText = newText;
-            OnObjectTooltipTextUpdated(SetEventPayload(newText));
             ResetTooltip();
         }
 
-        protected virtual void Awake()
-        {
-            VRTK_SDKManager.instance.AddBehaviourToToggleOnLoadedSetupChange(this);
-        }
-
-        protected virtual void OnEnable()
+        private void Start()
         {
             ResetTooltip();
-            headset = VRTK_DeviceFinder.HeadsetTransform();
         }
 
-        protected virtual void OnDestroy()
+        private void SetContainer()
         {
-            VRTK_SDKManager.instance.RemoveBehaviourToToggleOnLoadedSetupChange(this);
-        }
-
-        protected virtual void Update()
-        {
-            DrawLine();
-            if (alwaysFaceHeadset)
-            {
-                transform.LookAt(headset);
-            }
-        }
-
-        protected virtual ObjectTooltipEventArgs SetEventPayload(string newText = "")
-        {
-            ObjectTooltipEventArgs e;
-            e.newText = newText;
-            return e;
-        }
-
-        protected virtual void SetContainer()
-        {
-            transform.Find("TooltipCanvas").GetComponent<RectTransform>().sizeDelta = containerSize;
-            Transform tmpContainer = transform.Find("TooltipCanvas/UIContainer");
+            transform.FindChild("TooltipCanvas").GetComponent<RectTransform>().sizeDelta = containerSize;
+            var tmpContainer = transform.FindChild("TooltipCanvas/UIContainer");
             tmpContainer.GetComponent<RectTransform>().sizeDelta = containerSize;
             tmpContainer.GetComponent<Image>().color = containerColor;
         }
 
-        protected virtual void SetText(string name)
+        private void SetText(string name)
         {
-            Text tmpText = transform.Find("TooltipCanvas/" + name).GetComponent<Text>();
+            var tmpText = transform.FindChild("TooltipCanvas/" + name).GetComponent<Text>();
             tmpText.material = Resources.Load("UIText") as Material;
             tmpText.text = displayText.Replace("\\n", "\n");
             tmpText.color = fontColor;
             tmpText.fontSize = fontSize;
         }
 
-        protected virtual void SetLine()
+        private void SetLine()
         {
-            line = transform.Find("Line").GetComponent<LineRenderer>();
+            line = transform.FindChild("Line").GetComponent<LineRenderer>();
             line.material = Resources.Load("TooltipLine") as Material;
             line.material.color = lineColor;
-#if UNITY_5_5_OR_NEWER
-            line.startColor = lineColor;
-            line.endColor = lineColor;
-            line.startWidth = lineWidth;
-            line.endWidth = lineWidth;
-#else
             line.SetColors(lineColor, lineColor);
             line.SetWidth(lineWidth, lineWidth);
-#endif
             if (drawLineFrom == null)
             {
                 drawLineFrom = transform;
             }
         }
 
-        protected virtual void DrawLine()
+        private void DrawLine()
         {
-            if (drawLineTo != null)
+            if (drawLineTo)
             {
                 line.SetPosition(0, drawLineFrom.position);
                 line.SetPosition(1, drawLineTo.position);
             }
+        }
+
+        private void Update()
+        {
+            DrawLine();
         }
     }
 }

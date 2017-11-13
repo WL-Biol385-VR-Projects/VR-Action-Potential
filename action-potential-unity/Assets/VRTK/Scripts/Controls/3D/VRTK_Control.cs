@@ -1,27 +1,8 @@
-﻿// Control|Controls3D|100010
+﻿// Control|Controls3D|0010
 namespace VRTK
 {
     using UnityEngine;
     using UnityEngine.Events;
-    using System;
-
-    /// <summary>
-    /// Event Payload
-    /// </summary>
-    /// <param name="value">The current value being reported by the control.</param>
-    /// <param name="normalizedValue">The normalized value being reported by the control.</param>
-    public struct Control3DEventArgs
-    {
-        public float value;
-        public float normalizedValue;
-    }
-
-    /// <summary>
-    /// Event Payload
-    /// </summary>
-    /// <param name="sender">this object</param>
-    /// <param name="e"><see cref="Control3DEventArgs"/></param>
-    public delegate void Control3DEventHandler(object sender, Control3DEventArgs e);
 
     /// <summary>
     /// All 3D controls extend the `VRTK_Control` abstract class which provides a default set of methods and events that all of the subsequent controls expose.
@@ -29,12 +10,15 @@ namespace VRTK
     [ExecuteInEditMode]
     public abstract class VRTK_Control : MonoBehaviour
     {
-        [Serializable]
-        [Obsolete("`VRTK_Control.ValueChangedEvent` has been replaced with delegate events. `VRTK_Control_UnityEvents` is now required to access Unity events. This method will be removed in a future version of VRTK.")]
+        public enum Direction
+        {
+            autodetect, x, y, z
+        }
+
+        [System.Serializable]
         public class ValueChangedEvent : UnityEvent<float, float> { }
 
-        [Serializable]
-        [Obsolete("`VRTK_Control.DefaultControlEvents` has been replaced with delegate events. `VRTK_Control_UnityEvents` is now required to access Unity events. This method will be removed in a future version of VRTK.")]
+        [System.Serializable]
         public class DefaultControlEvents
         {
             /// <summary>
@@ -43,71 +27,39 @@ namespace VRTK
             public ValueChangedEvent OnValueChanged;
         }
 
-        /// <summary>
-        /// The ControlValueRange struct provides a way for each inherited control to support value normalization.
-        /// </summary>
+        // to be registered by each control to support value normalization
         public struct ControlValueRange
         {
             public float controlMin;
             public float controlMax;
         }
 
-        /// <summary>
-        /// 3D Control Directions
-        /// </summary>
-        /// <param name="autodetect">Attempt to auto detect the axis</param>
-        /// <param name="x">X axis</param>
-        /// <param name="y">Y axis</param>
-        /// <param name="z">Z axis</param>
-        public enum Direction
-        {
-            autodetect,
-            x,
-            y,
-            z
-        }
+        private static Color COLOR_OK = Color.yellow;
+        private static Color COLOR_ERROR = new Color(1, 0, 0, 0.9f);
+        private static float MIN_OPENING_DISTANCE = 20f; // percentage how far open something needs to be in order to activate it
 
-        [Tooltip("The default events for the control. This parameter is deprecated and will be removed in a future version of VRTK.")]
-        [Obsolete("`VRTK_Control.defaultEvents` has been replaced with delegate events. `VRTK_Control_UnityEvents` is now required to access Unity events. This method will be removed in a future version of VRTK.")]
         public DefaultControlEvents defaultEvents;
-
         [Tooltip("If active the control will react to the controller without the need to push the grab button.")]
         public bool interactWithoutGrab = false;
-
-        /// <summary>
-        /// Emitted when the 3D Control value has changed.
-        /// </summary>
-        public event Control3DEventHandler ValueChanged;
 
         abstract protected void InitRequiredComponents();
         abstract protected bool DetectSetup();
         abstract protected ControlValueRange RegisterValueRange();
-
+        abstract protected void HandleUpdate();
         protected Bounds bounds;
         protected bool setupSuccessful = true;
-        protected VRTK_ControllerRigidbodyActivator autoTriggerVolume;
 
         protected float value;
-        protected static Color COLOR_OK = Color.yellow;
-        protected static Color COLOR_ERROR = new Color(1, 0, 0, 0.9f);
-        protected const float MIN_OPENING_DISTANCE = 20f; // percentage how far open something needs to be in order to activate it
-        protected ControlValueRange valueRange;
-        protected GameObject controlContent;
-        protected bool hideControlContent = false;
 
-        public virtual void OnValueChanged(Control3DEventArgs e)
-        {
-            if (ValueChanged != null)
-            {
-                ValueChanged(this, e);
-            }
-        }
+        private ControlValueRange cvr;
+        private GameObject controlContent;
+        private bool hideControlContent = false;
 
         /// <summary>
         /// The GetValue method returns the current value/position/setting of the control depending on the control that is extending this abstract class.
         /// </summary>
         /// <returns>The current value of the control.</returns>
-        public virtual float GetValue()
+        public float GetValue()
         {
             return value;
         }
@@ -116,9 +68,9 @@ namespace VRTK
         /// The GetNormalizedValue method returns the current value mapped onto a range between 0 and 100.
         /// </summary>
         /// <returns>The current normalized value of the control.</returns>
-        public virtual float GetNormalizedValue()
+        public float GetNormalizedValue()
         {
-            return Mathf.Abs(Mathf.Round((value - valueRange.controlMin) / (valueRange.controlMax - valueRange.controlMin) * 100));
+            return Mathf.Abs(Mathf.Round((value - cvr.controlMin) / (cvr.controlMax - cvr.controlMin) * 100));
         }
 
         /// <summary>
@@ -126,7 +78,7 @@ namespace VRTK
         /// </summary>
         /// <param name="content">The content to be considered within the control.</param>
         /// <param name="hideContent">When true the content will be hidden in addition to being non-interactable in case the control is fully closed.</param>
-        public virtual void SetContent(GameObject content, bool hideContent)
+        public void SetContent(GameObject content, bool hideContent)
         {
             controlContent = content;
             hideControlContent = hideContent;
@@ -136,12 +88,10 @@ namespace VRTK
         /// The GetContent method returns the current game object of the control's content.
         /// </summary>
         /// <returns>The currently stored content for the control.</returns>
-        public virtual GameObject GetContent()
+        public GameObject GetContent()
         {
             return controlContent;
         }
-
-        abstract protected void HandleUpdate();
 
         protected virtual void Awake()
         {
@@ -158,7 +108,7 @@ namespace VRTK
 
             if (Application.isPlaying)
             {
-                valueRange = RegisterValueRange();
+                cvr = RegisterValueRange();
                 HandleInteractables();
             }
         }
@@ -178,25 +128,9 @@ namespace VRTK
                 if (value != oldValue)
                 {
                     HandleInteractables();
-
-#pragma warning disable 0618
-                    /// <obsolete>
-                    /// This is an obsolete call that will be removed in a future version
-                    /// </obsolete>
                     defaultEvents.OnValueChanged.Invoke(GetValue(), GetNormalizedValue());
-#pragma warning restore 0618
-
-                    OnValueChanged(SetControlEvent());
                 }
             }
-        }
-
-        protected virtual Control3DEventArgs SetControlEvent()
-        {
-            Control3DEventArgs e;
-            e.value = GetValue();
-            e.normalizedValue = GetNormalizedValue();
-            return e;
         }
 
         protected virtual void OnDrawGizmos()
@@ -206,7 +140,7 @@ namespace VRTK
                 return;
             }
 
-            bounds = VRTK_SharedMethods.GetBounds(transform);
+            bounds = Utilities.GetBounds(transform);
             Gizmos.color = (setupSuccessful) ? COLOR_OK : COLOR_ERROR;
 
             if (setupSuccessful)
@@ -219,22 +153,7 @@ namespace VRTK
             }
         }
 
-        protected virtual void CreateTriggerVolume()
-        {
-            GameObject autoTriggerVolumeGO = new GameObject(name + "-Trigger");
-            autoTriggerVolumeGO.transform.SetParent(transform);
-            autoTriggerVolume = autoTriggerVolumeGO.AddComponent<VRTK_ControllerRigidbodyActivator>();
-
-            // calculate bounding box
-            Bounds triggerBounds = VRTK_SharedMethods.GetBounds(transform);
-            triggerBounds.Expand(triggerBounds.size * 0.2f);
-            autoTriggerVolumeGO.transform.position = triggerBounds.center;
-            BoxCollider triggerCollider = autoTriggerVolumeGO.AddComponent<BoxCollider>();
-            triggerCollider.isTrigger = true;
-            triggerCollider.size = triggerBounds.size;
-        }
-
-        protected Vector3 GetThirdDirection(Vector3 axis1, Vector3 axis2)
+        protected Vector3 getThirdDirection(Vector3 axis1, Vector3 axis2)
         {
             bool xTaken = axis1.x != 0 || axis2.x != 0;
             bool yTaken = axis1.y != 0 || axis2.y != 0;
@@ -252,9 +171,25 @@ namespace VRTK
             {
                 return Vector3.right;
             }
+
         }
 
-        protected virtual void HandleInteractables()
+        private void CreateTriggerVolume()
+        {
+            GameObject tvGo = new GameObject(name + "-Trigger");
+            tvGo.transform.SetParent(transform);
+            tvGo.AddComponent<VRTK_ControllerRigidbodyActivator>();
+
+            // calculate bounding box
+            Bounds bounds = Utilities.GetBounds(transform);
+            bounds.Expand(bounds.size * 0.2f);
+            tvGo.transform.position = bounds.center;
+            BoxCollider bc = tvGo.AddComponent<BoxCollider>();
+            bc.isTrigger = true;
+            bc.size = bounds.size;
+        }
+
+        private void HandleInteractables()
         {
             if (controlContent == null)
             {
@@ -267,7 +202,7 @@ namespace VRTK
             }
 
             // do not cache objects since otherwise they would still be made inactive once taken out of the content
-            foreach (var io in controlContent.GetComponentsInChildren<VRTK_InteractableObject>(true))
+            foreach (VRTK_InteractableObject io in controlContent.GetComponentsInChildren<VRTK_InteractableObject>(true))
             {
                 io.enabled = value > MIN_OPENING_DISTANCE;
             }

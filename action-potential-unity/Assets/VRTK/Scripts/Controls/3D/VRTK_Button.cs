@@ -1,16 +1,8 @@
-﻿// Button|Controls3D|100020
+﻿// Button|Controls3D|0020
 namespace VRTK
 {
     using UnityEngine;
     using UnityEngine.Events;
-    using System;
-
-    /// <summary>
-    /// Event Payload
-    /// </summary>
-    /// <param name="sender">this object</param>
-    /// <param name="e"><see cref="Control3DEventArgs"/></param>
-    public delegate void Button3DEventHandler(object sender, Control3DEventArgs e);
 
     /// <summary>
     /// Attaching the script to a game object will allow the user to interact with it as if it were a push button. The direction into which the button should be pushable can be freely set and auto-detection is supported. Since this is physics-based there needs to be empty space in the push direction so that the button can move.
@@ -21,36 +13,11 @@ namespace VRTK
     /// <example>
     /// `VRTK/Examples/025_Controls_Overview` shows a collection of pressable buttons that are interacted with by activating the rigidbody on the controller by pressing the grab button without grabbing an object.
     /// </example>
-    [AddComponentMenu("VRTK/Scripts/Controls/3D/VRTK_Button")]
     public class VRTK_Button : VRTK_Control
     {
-
-        [Serializable]
-        [Obsolete("`VRTK_Control.ButtonEvents` has been replaced with delegate events. `VRTK_Button_UnityEvents` is now required to access Unity events. This method will be removed in a future version of VRTK.")]
-        public class ButtonEvents
-        {
-            public UnityEvent OnPush;
-        }
-
-        /// <summary>
-        /// 3D Control Button Directions
-        /// </summary>
-        /// <param name="autodetect">Attempt to auto detect the axis</param>
-        /// <param name="x">X axis</param>
-        /// <param name="y">Y axis</param>
-        /// <param name="z">Z axis</param>
-        /// <param name="negX">Negative X axis</param>
-        /// <param name="negY">Negative Y axis</param>
-        /// <param name="negZ">Negative Z axis</param>
         public enum ButtonDirection
         {
-            autodetect,
-            x,
-            y,
-            z,
-            negX,
-            negY,
-            negZ
+            autodetect, x, y, z, negX, negY, negZ
         }
 
         [Tooltip("An optional game object to which the button will be connected. If the game object moves the button will follow along.")]
@@ -62,44 +29,25 @@ namespace VRTK
         [Tooltip("The amount of force needed to push the button down as well as the speed with which it will go back into its original position.")]
         public float buttonStrength = 5.0f;
 
-        [Tooltip("The events specific to the button control. This parameter is deprecated and will be removed in a future version of VRTK.")]
-        [Obsolete("`VRTK_Control.events` has been replaced with delegate events. `VRTK_Button_UnityEvents` is now required to access Unity events. This method will be removed in a future version of VRTK.")]
+        [System.Serializable]
+        public class ButtonEvents
+        {
+            /// <summary>
+            /// Emitted when the button is successfully pushed.
+            /// </summary>
+            public UnityEvent OnPush;
+        }
+
         public ButtonEvents events;
 
-        /// <summary>
-        /// Emitted when the 3D Button has reached its activation distance.
-        /// </summary>
-        public event Button3DEventHandler Pushed;
-
-        /// <summary>
-        /// Emitted when the 3D Button's position has become less than activation distance after being pressed.
-        /// </summary>
-        public event Button3DEventHandler Released;
-
-        protected const float MAX_AUTODETECT_ACTIVATION_LENGTH = 4f; // full hight of button
-        protected ButtonDirection finalDirection;
-        protected Vector3 restingPosition;
-        protected Vector3 activationDir;
-        protected Rigidbody buttonRigidbody;
-        protected ConfigurableJoint buttonJoint;
-        protected ConstantForce buttonForce;
-        protected int forceCount = 0;
-
-        public virtual void OnPushed(Control3DEventArgs e)
-        {
-            if (Pushed != null)
-            {
-                Pushed(this, e);
-            }
-        }
-
-        public virtual void OnReleased(Control3DEventArgs e)
-        {
-            if (Released != null)
-            {
-                Released(this, e);
-            }
-        }
+        private static float MAX_AUTODETECT_ACTIVATION_LENGTH = 4; // full hight of button
+        private ButtonDirection finalDirection;
+        private Vector3 restingPosition;
+        private Vector3 activationDir;
+        private Rigidbody rb;
+        private ConfigurableJoint cj;
+        private ConstantForce cf;
+        private int forceCount = 0;
 
         protected override void OnDrawGizmos()
         {
@@ -122,34 +70,34 @@ namespace VRTK
                 gameObject.AddComponent<BoxCollider>();
             }
 
-            buttonRigidbody = GetComponent<Rigidbody>();
-            if (buttonRigidbody == null)
+            rb = GetComponent<Rigidbody>();
+            if (rb == null)
             {
-                buttonRigidbody = gameObject.AddComponent<Rigidbody>();
+                rb = gameObject.AddComponent<Rigidbody>();
             }
-            buttonRigidbody.isKinematic = false;
-            buttonRigidbody.useGravity = false;
+            rb.isKinematic = false;
+            rb.useGravity = false;
 
-            buttonForce = GetComponent<ConstantForce>();
-            if (buttonForce == null)
+            cf = GetComponent<ConstantForce>();
+            if (cf == null)
             {
-                buttonForce = gameObject.AddComponent<ConstantForce>();
+                cf = gameObject.AddComponent<ConstantForce>();
             }
 
             if (connectedTo)
             {
-                Rigidbody connectedToRigidbody = connectedTo.GetComponent<Rigidbody>();
-                if (connectedToRigidbody == null)
+                Rigidbody rb2 = connectedTo.GetComponent<Rigidbody>();
+                if (rb2 == null)
                 {
-                    connectedToRigidbody = connectedTo.AddComponent<Rigidbody>();
+                    rb2 = connectedTo.AddComponent<Rigidbody>();
                 }
-                connectedToRigidbody.useGravity = false;
+                rb2.useGravity = false;
             }
         }
 
         protected override bool DetectSetup()
         {
-            finalDirection = (direction == ButtonDirection.autodetect ? DetectDirection() : direction);
+            finalDirection = (direction == ButtonDirection.autodetect) ? DetectDirection() : direction;
             if (finalDirection == ButtonDirection.autodetect)
             {
                 activationDir = Vector3.zero;
@@ -160,55 +108,55 @@ namespace VRTK
                 activationDir = CalculateActivationDir();
             }
 
-            if (buttonForce)
+            if (cf)
             {
-                buttonForce.force = GetForceVector();
+                cf.force = GetForceVector();
             }
 
             if (Application.isPlaying)
             {
-                buttonJoint = GetComponent<ConfigurableJoint>();
+                cj = GetComponent<ConfigurableJoint>();
 
                 bool recreate = false;
                 Rigidbody oldBody = null;
                 Vector3 oldAnchor = Vector3.zero;
                 Vector3 oldAxis = Vector3.zero;
 
-                if (buttonJoint)
+                if (cj)
                 {
                     // save old values, needs to be recreated
-                    oldBody = buttonJoint.connectedBody;
-                    oldAnchor = buttonJoint.anchor;
-                    oldAxis = buttonJoint.axis;
-                    DestroyImmediate(buttonJoint);
+                    oldBody = cj.connectedBody;
+                    oldAnchor = cj.anchor;
+                    oldAxis = cj.axis;
+                    DestroyImmediate(cj);
                     recreate = true;
                 }
 
                 // since limit applies to both directions object needs to be moved halfway to activation before adding joint
-                transform.position = transform.position + ((activationDir.normalized * activationDistance) * 0.5f);
-                buttonJoint = gameObject.AddComponent<ConfigurableJoint>();
+                transform.position = transform.position + activationDir.normalized * activationDistance * 0.5f;
+                cj = gameObject.AddComponent<ConfigurableJoint>();
 
                 if (recreate)
                 {
-                    buttonJoint.connectedBody = oldBody;
-                    buttonJoint.anchor = oldAnchor;
-                    buttonJoint.axis = oldAxis;
+                    cj.connectedBody = oldBody;
+                    cj.anchor = oldAnchor;
+                    cj.axis = oldAxis;
                 }
                 if (connectedTo)
                 {
-                    buttonJoint.connectedBody = connectedTo.GetComponent<Rigidbody>();
+                    cj.connectedBody = connectedTo.GetComponent<Rigidbody>();
                 }
 
-                SoftJointLimit buttonJointLimits = new SoftJointLimit();
-                buttonJointLimits.limit = activationDistance * 0.501f; // set limit to half (since it applies to both directions) and a tiny bit larger since otherwise activation distance might be missed
-                buttonJoint.linearLimit = buttonJointLimits;
+                SoftJointLimit sjl = new SoftJointLimit();
+                sjl.limit = activationDistance * 0.501f; // set limit to half (since it applies to both directions) and a tiny bit larger since otherwise activation distance might be missed
+                cj.linearLimit = sjl;
 
-                buttonJoint.angularXMotion = ConfigurableJointMotion.Locked;
-                buttonJoint.angularYMotion = ConfigurableJointMotion.Locked;
-                buttonJoint.angularZMotion = ConfigurableJointMotion.Locked;
-                buttonJoint.xMotion = ConfigurableJointMotion.Locked;
-                buttonJoint.yMotion = ConfigurableJointMotion.Locked;
-                buttonJoint.zMotion = ConfigurableJointMotion.Locked;
+                cj.angularXMotion = ConfigurableJointMotion.Locked;
+                cj.angularYMotion = ConfigurableJointMotion.Locked;
+                cj.angularZMotion = ConfigurableJointMotion.Locked;
+                cj.xMotion = ConfigurableJointMotion.Locked;
+                cj.yMotion = ConfigurableJointMotion.Locked;
+                cj.zMotion = ConfigurableJointMotion.Locked;
 
                 switch (finalDirection)
                 {
@@ -216,45 +164,45 @@ namespace VRTK
                     case ButtonDirection.negX:
                         if (Mathf.RoundToInt(Mathf.Abs(transform.right.x)) == 1)
                         {
-                            buttonJoint.xMotion = ConfigurableJointMotion.Limited;
+                            cj.xMotion = ConfigurableJointMotion.Limited;
                         }
                         else if (Mathf.RoundToInt(Mathf.Abs(transform.up.x)) == 1)
                         {
-                            buttonJoint.yMotion = ConfigurableJointMotion.Limited;
+                            cj.yMotion = ConfigurableJointMotion.Limited;
                         }
                         else if (Mathf.RoundToInt(Mathf.Abs(transform.forward.x)) == 1)
                         {
-                            buttonJoint.zMotion = ConfigurableJointMotion.Limited;
+                            cj.zMotion = ConfigurableJointMotion.Limited;
                         }
                         break;
                     case ButtonDirection.y:
                     case ButtonDirection.negY:
                         if (Mathf.RoundToInt(Mathf.Abs(transform.right.y)) == 1)
                         {
-                            buttonJoint.xMotion = ConfigurableJointMotion.Limited;
+                            cj.xMotion = ConfigurableJointMotion.Limited;
                         }
                         else if (Mathf.RoundToInt(Mathf.Abs(transform.up.y)) == 1)
                         {
-                            buttonJoint.yMotion = ConfigurableJointMotion.Limited;
+                            cj.yMotion = ConfigurableJointMotion.Limited;
                         }
                         else if (Mathf.RoundToInt(Mathf.Abs(transform.forward.y)) == 1)
                         {
-                            buttonJoint.zMotion = ConfigurableJointMotion.Limited;
+                            cj.zMotion = ConfigurableJointMotion.Limited;
                         }
                         break;
                     case ButtonDirection.z:
                     case ButtonDirection.negZ:
                         if (Mathf.RoundToInt(Mathf.Abs(transform.right.z)) == 1)
                         {
-                            buttonJoint.xMotion = ConfigurableJointMotion.Limited;
+                            cj.xMotion = ConfigurableJointMotion.Limited;
                         }
                         else if (Mathf.RoundToInt(Mathf.Abs(transform.up.z)) == 1)
                         {
-                            buttonJoint.yMotion = ConfigurableJointMotion.Limited;
+                            cj.yMotion = ConfigurableJointMotion.Limited;
                         }
                         else if (Mathf.RoundToInt(Mathf.Abs(transform.forward.z)) == 1)
                         {
-                            buttonJoint.zMotion = ConfigurableJointMotion.Limited;
+                            cj.zMotion = ConfigurableJointMotion.Limited;
                         }
                         break;
                 }
@@ -265,11 +213,7 @@ namespace VRTK
 
         protected override ControlValueRange RegisterValueRange()
         {
-            return new ControlValueRange()
-            {
-                controlMin = 0,
-                controlMax = 1
-            };
+            return new ControlValueRange() { controlMin = 0, controlMax = 1 };
         }
 
         protected override void HandleUpdate()
@@ -281,51 +225,28 @@ namespace VRTK
                 if (oldState == 0)
                 {
                     value = 1;
-
-#pragma warning disable 0618
-                    /// <obsolete>
-                    /// This is an obsolete call that will be removed in a future version
-                    /// </obsolete>
                     events.OnPush.Invoke();
-#pragma warning restore 0618
-
-                    OnPushed(SetControlEvent());
                 }
             }
             else
             {
-                if(oldState == 1)
-                {
-                    value = 0;
-                    OnReleased(SetControlEvent());
-                }
+                value = 0;
             }
         }
 
-        protected virtual void FixedUpdate()
+        private void FixedUpdate()
         {
             // update reference position if no force is acting on the button to support scenarios where the button is moved at runtime with a connected body
-            if (forceCount == 0 && buttonJoint.connectedBody)
+            if (forceCount == 0 && cj.connectedBody)
             {
                 restingPosition = transform.position;
             }
         }
 
-        protected virtual void OnCollisionExit(Collision collision)
+        private ButtonDirection DetectDirection()
         {
-            // TODO: this will not always be triggered for some reason, we probably need some "healing"
-            forceCount -= 1;
-        }
-
-        protected virtual void OnCollisionEnter(Collision collision)
-        {
-            forceCount += 1;
-        }
-
-        protected virtual ButtonDirection DetectDirection()
-        {
-            ButtonDirection returnDirection = ButtonDirection.autodetect;
-            Bounds bounds = VRTK_SharedMethods.GetBounds(transform);
+            ButtonDirection direction = ButtonDirection.autodetect;
+            Bounds bounds = Utilities.GetBounds(transform);
 
             // shoot rays from the center of the button to learn about surroundings
             RaycastHit hitForward;
@@ -351,39 +272,39 @@ namespace VRTK
 
             float extents = 0;
             Vector3 hitPoint = Vector3.zero;
-            if (VRTK_SharedMethods.IsLowest(lengthX, new float[] { lengthY, lengthZ, lengthNegX, lengthNegY, lengthNegZ }))
+            if (Utilities.IsLowest(lengthX, new float[] { lengthY, lengthZ, lengthNegX, lengthNegY, lengthNegZ }))
             {
-                returnDirection = ButtonDirection.negX;
+                direction = ButtonDirection.negX;
                 hitPoint = hitRight.point;
                 extents = bounds.extents.x;
             }
-            else if (VRTK_SharedMethods.IsLowest(lengthY, new float[] { lengthX, lengthZ, lengthNegX, lengthNegY, lengthNegZ }))
+            else if (Utilities.IsLowest(lengthY, new float[] { lengthX, lengthZ, lengthNegX, lengthNegY, lengthNegZ }))
             {
-                returnDirection = ButtonDirection.y;
+                direction = ButtonDirection.y;
                 hitPoint = hitDown.point;
                 extents = bounds.extents.y;
             }
-            else if (VRTK_SharedMethods.IsLowest(lengthZ, new float[] { lengthX, lengthY, lengthNegX, lengthNegY, lengthNegZ }))
+            else if (Utilities.IsLowest(lengthZ, new float[] { lengthX, lengthY, lengthNegX, lengthNegY, lengthNegZ }))
             {
-                returnDirection = ButtonDirection.z;
+                direction = ButtonDirection.z;
                 hitPoint = hitBack.point;
                 extents = bounds.extents.z;
             }
-            else if (VRTK_SharedMethods.IsLowest(lengthNegX, new float[] { lengthX, lengthY, lengthZ, lengthNegY, lengthNegZ }))
+            else if (Utilities.IsLowest(lengthNegX, new float[] { lengthX, lengthY, lengthZ, lengthNegY, lengthNegZ }))
             {
-                returnDirection = ButtonDirection.x;
+                direction = ButtonDirection.x;
                 hitPoint = hitLeft.point;
                 extents = bounds.extents.x;
             }
-            else if (VRTK_SharedMethods.IsLowest(lengthNegY, new float[] { lengthX, lengthY, lengthZ, lengthNegX, lengthNegZ }))
+            else if (Utilities.IsLowest(lengthNegY, new float[] { lengthX, lengthY, lengthZ, lengthNegX, lengthNegZ }))
             {
-                returnDirection = ButtonDirection.negY;
+                direction = ButtonDirection.negY;
                 hitPoint = hitUp.point;
                 extents = bounds.extents.y;
             }
-            else if (VRTK_SharedMethods.IsLowest(lengthNegZ, new float[] { lengthX, lengthY, lengthZ, lengthNegX, lengthNegY }))
+            else if (Utilities.IsLowest(lengthNegZ, new float[] { lengthX, lengthY, lengthZ, lengthNegX, lengthNegY }))
             {
-                returnDirection = ButtonDirection.negZ;
+                direction = ButtonDirection.negZ;
                 hitPoint = hitForward.point;
                 extents = bounds.extents.z;
             }
@@ -391,10 +312,10 @@ namespace VRTK
             // determin activation distance
             activationDistance = (Vector3.Distance(hitPoint, bounds.center) - extents) * 0.95f;
 
-            if (returnDirection == ButtonDirection.autodetect || activationDistance < 0.001f)
+            if (direction == ButtonDirection.autodetect || activationDistance < 0.001f)
             {
                 // auto-detection was not possible or colliding with object already
-                returnDirection = ButtonDirection.autodetect;
+                direction = ButtonDirection.autodetect;
                 activationDistance = 0;
             }
             else
@@ -402,12 +323,12 @@ namespace VRTK
                 activationDir = hitPoint - bounds.center;
             }
 
-            return returnDirection;
+            return direction;
         }
 
-        protected virtual Vector3 CalculateActivationDir()
+        private Vector3 CalculateActivationDir()
         {
-            Bounds bounds = VRTK_SharedMethods.GetBounds(transform, transform);
+            Bounds bounds = Utilities.GetBounds(transform, transform);
 
             Vector3 buttonDirection = Vector3.zero;
             float extents = 0;
@@ -473,17 +394,28 @@ namespace VRTK
             }
 
             // subtract width of button
-            return (buttonDirection * (extents + activationDistance));
+            return buttonDirection * (extents + activationDistance);
         }
 
-        protected virtual bool ReachedActivationDistance()
+        private bool ReachedActivationDistance()
         {
-            return (Vector3.Distance(transform.position, restingPosition) >= activationDistance);
+            return Vector3.Distance(transform.position, restingPosition) >= activationDistance;
         }
 
-        protected virtual Vector3 GetForceVector()
+        private Vector3 GetForceVector()
         {
-            return (-activationDir.normalized * buttonStrength);
+            return -activationDir.normalized * buttonStrength;
+        }
+
+        private void OnCollisionExit(Collision collision)
+        {
+            // TODO: this will not always be triggered for some reason, we probably need some "healing"
+            forceCount -= 1;
+        }
+
+        private void OnCollisionEnter(Collision collision)
+        {
+            forceCount += 1;
         }
     }
 }
