@@ -1,4 +1,5 @@
 ﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "action-potential-unity", "Assembly-CSharp.csproj", "{9E36480F-E704-628B-3974-1DB57BD1EAB0}"
 EndProject
